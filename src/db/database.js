@@ -1,4 +1,3 @@
-import { DatabaseSync } from 'node:sqlite';
 import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,126 +6,135 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const dbPath = path.resolve(__dirname, '../../mailserver.db');
 
-export const db = new DatabaseSync(dbPath);
+export let db = null;
 
 // ============================================================================
-// DATABASE SCHEMA & SAFE MIGRATIONS
+// DATABASE SCHEMA & SAFE MIGRATIONS (Skipped on Vercel serverless)
 // ============================================================================
 
-db.exec(`
-  PRAGMA foreign_keys = ON;
+if (!process.env.VERCEL) {
+  try {
+    const { DatabaseSync } = await import('node:sqlite');
+    db = new DatabaseSync(dbPath);
 
-  CREATE TABLE IF NOT EXISTS domains (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE NOT NULL,
-    status TEXT DEFAULT 'active',
-    dkim_selector TEXT DEFAULT 'default',
-    dkim_private_key TEXT NOT NULL,
-    dkim_public_key TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
+    db.exec(`
+      PRAGMA foreign_keys = ON;
 
-  CREATE TABLE IF NOT EXISTS mailboxes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    domain_id INTEGER NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    name TEXT NOT NULL,
-    password_hash TEXT NOT NULL,
-    quota_mb INTEGER DEFAULT 1024,
-    api_token TEXT UNIQUE NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(domain_id) REFERENCES domains(id) ON DELETE CASCADE
-  );
+      CREATE TABLE IF NOT EXISTS domains (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
+        status TEXT DEFAULT 'active',
+        dkim_selector TEXT DEFAULT 'default',
+        dkim_private_key TEXT NOT NULL,
+        dkim_public_key TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
 
-  CREATE TABLE IF NOT EXISTS emails (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    mailbox_id INTEGER NOT NULL,
-    folder TEXT DEFAULT 'inbox',
-    direction TEXT DEFAULT 'inbound',
-    from_address TEXT NOT NULL,
-    from_name TEXT,
-    to_address TEXT NOT NULL,
-    subject TEXT,
-    body_text TEXT,
-    body_html TEXT,
-    is_read INTEGER DEFAULT 0,
-    is_starred INTEGER DEFAULT 0,
-    raw_headers TEXT,
-    message_id TEXT,
-    dkim_status TEXT DEFAULT 'none',
-    delivery_status TEXT DEFAULT 'delivered',
-    provider_email_id TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(mailbox_id) REFERENCES mailboxes(id) ON DELETE CASCADE
-  );
+      CREATE TABLE IF NOT EXISTS mailboxes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        domain_id INTEGER NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        password_hash TEXT NOT NULL,
+        quota_mb INTEGER DEFAULT 1024,
+        api_token TEXT UNIQUE NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(domain_id) REFERENCES domains(id) ON DELETE CASCADE
+      );
 
-  CREATE TABLE IF NOT EXISTS attachments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email_id INTEGER NOT NULL,
-    filename TEXT NOT NULL,
-    content_type TEXT,
-    size INTEGER,
-    data_base64 TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(email_id) REFERENCES emails(id) ON DELETE CASCADE
-  );
+      CREATE TABLE IF NOT EXISTS emails (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mailbox_id INTEGER NOT NULL,
+        folder TEXT DEFAULT 'inbox',
+        direction TEXT DEFAULT 'inbound',
+        from_address TEXT NOT NULL,
+        from_name TEXT,
+        to_address TEXT NOT NULL,
+        subject TEXT,
+        body_text TEXT,
+        body_html TEXT,
+        is_read INTEGER DEFAULT 0,
+        is_starred INTEGER DEFAULT 0,
+        raw_headers TEXT,
+        message_id TEXT,
+        dkim_status TEXT DEFAULT 'none',
+        delivery_status TEXT DEFAULT 'delivered',
+        provider_email_id TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(mailbox_id) REFERENCES mailboxes(id) ON DELETE CASCADE
+      );
 
-  CREATE TABLE IF NOT EXISTS outbound_queue (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    mailbox_id INTEGER NOT NULL,
-    to_address TEXT NOT NULL,
-    subject TEXT,
-    status TEXT DEFAULT 'pending',
-    attempts INTEGER DEFAULT 0,
-    max_attempts INTEGER DEFAULT 5,
-    last_error TEXT,
-    mx_host TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(mailbox_id) REFERENCES mailboxes(id) ON DELETE CASCADE
-  );
+      CREATE TABLE IF NOT EXISTS attachments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email_id INTEGER NOT NULL,
+        filename TEXT NOT NULL,
+        content_type TEXT,
+        size INTEGER,
+        data_base64 TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(email_id) REFERENCES emails(id) ON DELETE CASCADE
+      );
 
-  CREATE TABLE IF NOT EXISTS inbound_events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    event_id TEXT UNIQUE NOT NULL,
-    event_type TEXT NOT NULL,
-    payload TEXT NOT NULL,
-    status TEXT DEFAULT 'pending',
-    attempts INTEGER DEFAULT 0,
-    max_attempts INTEGER DEFAULT 5,
-    last_error TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    processed_at DATETIME
-  );
+      CREATE TABLE IF NOT EXISTS outbound_queue (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mailbox_id INTEGER NOT NULL,
+        to_address TEXT NOT NULL,
+        subject TEXT,
+        status TEXT DEFAULT 'pending',
+        attempts INTEGER DEFAULT 0,
+        max_attempts INTEGER DEFAULT 5,
+        last_error TEXT,
+        mx_host TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(mailbox_id) REFERENCES mailboxes(id) ON DELETE CASCADE
+      );
 
-  CREATE TABLE IF NOT EXISTS smtp_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    type TEXT,
-    client_ip TEXT,
-    sender TEXT,
-    recipient TEXT,
-    status TEXT,
-    details TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-`);
+      CREATE TABLE IF NOT EXISTS inbound_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_id TEXT UNIQUE NOT NULL,
+        event_type TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        attempts INTEGER DEFAULT 0,
+        max_attempts INTEGER DEFAULT 5,
+        last_error TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        processed_at DATETIME
+      );
 
-// Safe migration: Ensure provider_email_id exists in emails table
-try {
-  const tableInfo = db.prepare(`PRAGMA table_info(emails)`).all();
-  const hasProviderId = tableInfo.some((col) => col.name === 'provider_email_id');
-  if (!hasProviderId) {
-    db.exec(`ALTER TABLE emails ADD COLUMN provider_email_id TEXT;`);
+      CREATE TABLE IF NOT EXISTS smtp_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT,
+        client_ip TEXT,
+        sender TEXT,
+        recipient TEXT,
+        status TEXT,
+        details TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Safe migration: Ensure provider_email_id exists in emails table
+    try {
+      const tableInfo = db.prepare(`PRAGMA table_info(emails)`).all();
+      const hasProviderId = tableInfo.some((col) => col.name === 'provider_email_id');
+      if (!hasProviderId) {
+        db.exec(`ALTER TABLE emails ADD COLUMN provider_email_id TEXT;`);
+      }
+    } catch (e) {
+      console.warn('[DB Migration Warning]:', e.message);
+    }
+
+    // Ensure unique index for idempotency across provider emails per mailbox
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_emails_provider_mailbox ON emails(provider_email_id, mailbox_id);
+      CREATE INDEX IF NOT EXISTS idx_inbound_events_status ON inbound_events(status);
+    `);
+  } catch (err) {
+    console.warn('[SQLite Notice]: SQLite skipped (using PostgreSQL):', err.message);
   }
-} catch (e) {
-  console.warn('[DB Migration Warning]:', e.message);
 }
-
-// Ensure unique index for idempotency across provider emails per mailbox
-db.exec(`
-  CREATE INDEX IF NOT EXISTS idx_emails_provider_mailbox ON emails(provider_email_id, mailbox_id);
-  CREATE INDEX IF NOT EXISTS idx_inbound_events_status ON inbound_events(status);
-`);
 
 // ============================================================================
 // SECURITY HELPERS (Scrypt & DKIM)

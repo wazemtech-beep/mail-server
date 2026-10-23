@@ -7,7 +7,22 @@ import { generateDkimKeys, hashPassword, verifyPassword } from './database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const caPath = path.resolve(__dirname, '../../ca.pem');
+const caCandidates = [
+  path.resolve(process.cwd(), 'ca.pem'),
+  path.resolve(__dirname, '../../ca.pem'),
+  path.resolve(__dirname, '../ca.pem'),
+  path.resolve('/var/task/ca.pem')
+];
+
+let caContent = null;
+for (const p of caCandidates) {
+  if (fs.existsSync(p)) {
+    try {
+      caContent = fs.readFileSync(p, 'utf8');
+      break;
+    } catch {}
+  }
+}
 
 const { Pool } = pg;
 
@@ -22,8 +37,7 @@ export function getPgPool() {
  */
 export async function initPostgres(connectionString) {
   let sslConfig = { rejectUnauthorized: false };
-  if (fs.existsSync(caPath)) {
-    const caContent = fs.readFileSync(caPath, 'utf8');
+  if (caContent) {
     sslConfig = {
       ca: caContent,
       rejectUnauthorized: false

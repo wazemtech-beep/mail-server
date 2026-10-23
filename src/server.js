@@ -71,23 +71,142 @@ const RESEND_WEBHOOK_SECRET = process.env.RESEND_WEBHOOK_SECRET || '';
 // ============================================================================
 
 const dbAdapter = {
-  getStats: async () => getPgPool() ? await pgGetStats() : getStats(),
-  getDomains: async (keys) => getPgPool() ? await pgGetDomains(keys) : getDomains(keys),
-  getDomainById: async (id, keys) => getPgPool() ? await pgGetDomainById(id, keys) : getDomainById(id, keys),
-  createDomain: async (name) => getPgPool() ? await pgCreateDomain(name) : createDomain(name),
-  getMailboxes: async (dId, sec) => getPgPool() ? await pgGetMailboxes(dId, sec) : getMailboxes(dId, sec),
-  getMailboxById: async (id, sec) => getPgPool() ? await pgGetMailboxById(id, sec) : getMailboxById(id, sec),
-  getMailboxByEmail: async (email, sec) => getPgPool() ? await pgGetMailboxByEmail(email, sec) : getMailboxByEmail(email, sec),
-  createMailbox: async (dId, em, nm, pw) => getPgPool() ? await pgCreateMailbox(dId, em, nm, pw) : createMailbox(dId, em, nm, pw),
-  getEmails: async (mId, folder) => getPgPool() ? await pgGetEmails(mId, folder) : getEmails(mId, folder),
-  getEmailById: async (id, mId) => getPgPool() ? await pgGetEmailById(id, mId) : getEmailById(id, mId),
-  getAttachmentById: async (id, mId) => getPgPool() ? await pgGetAttachmentById(id, mId) : getAttachmentById(id, mId),
-  markEmailRead: async (id, mId, r) => getPgPool() ? await pgMarkEmailRead(id, mId, r) : markEmailRead(id, mId, r),
-  toggleStarEmail: async (id, mId) => getPgPool() ? await pgToggleStarEmail(id, mId) : toggleStarEmail(id, mId),
-  deleteEmail: async (id, mId) => getPgPool() ? await pgDeleteEmail(id, mId) : deleteEmail(id, mId),
-  recordInboundEvent: async (eId, type, pl) => getPgPool() ? await pgRecordInboundEvent(eId, type, pl) : recordInboundEvent(eId, type, pl),
-  getInboundEventById: async (eId) => getPgPool() ? await pgGetInboundEventById(eId) : getInboundEventById(eId),
-  getSmtpLogs: async (l) => getPgPool() ? await pgGetSmtpLogs(l) : getSmtpLogs(l)
+  getStats: async () => {
+    if (getPgPool()) return await pgGetStats();
+    if (process.env.DATABASE_URL) {
+      await initPostgres(process.env.DATABASE_URL);
+      return await pgGetStats();
+    }
+    return db ? getStats() : { domainsCount: 0, mailboxesCount: 0, emailsCount: 0, unreadCount: 0, inboundEventsCount: 0 };
+  },
+  getDomains: async (keys) => {
+    if (getPgPool()) return await pgGetDomains(keys);
+    if (process.env.DATABASE_URL) {
+      await initPostgres(process.env.DATABASE_URL);
+      return await pgGetDomains(keys);
+    }
+    return db ? getDomains(keys) : [];
+  },
+  getDomainById: async (id, keys) => {
+    if (getPgPool()) return await pgGetDomainById(id, keys);
+    if (process.env.DATABASE_URL) {
+      await initPostgres(process.env.DATABASE_URL);
+      return await pgGetDomainById(id, keys);
+    }
+    return db ? getDomainById(id, keys) : null;
+  },
+  createDomain: async (name) => {
+    if (getPgPool()) return await pgCreateDomain(name);
+    if (process.env.DATABASE_URL) {
+      await initPostgres(process.env.DATABASE_URL);
+      return await pgCreateDomain(name);
+    }
+    return db ? createDomain(name) : null;
+  },
+  getMailboxes: async (dId, sec) => {
+    if (getPgPool()) return await pgGetMailboxes(dId, sec);
+    if (process.env.DATABASE_URL) {
+      await initPostgres(process.env.DATABASE_URL);
+      return await pgGetMailboxes(dId, sec);
+    }
+    return db ? getMailboxes(dId, sec) : [];
+  },
+  getMailboxById: async (id, sec) => {
+    if (getPgPool()) return await pgGetMailboxById(id, sec);
+    if (process.env.DATABASE_URL) {
+      await initPostgres(process.env.DATABASE_URL);
+      return await pgGetMailboxById(id, sec);
+    }
+    return db ? getMailboxById(id, sec) : null;
+  },
+  getMailboxByEmail: async (email, sec) => {
+    if (getPgPool()) return await pgGetMailboxByEmail(email, sec);
+    if (process.env.DATABASE_URL) {
+      await initPostgres(process.env.DATABASE_URL);
+      return await pgGetMailboxByEmail(email, sec);
+    }
+    return db ? getMailboxByEmail(email, sec) : null;
+  },
+  createMailbox: async (dId, em, nm, pw) => {
+    if (getPgPool()) return await pgCreateMailbox(dId, em, nm, pw);
+    if (process.env.DATABASE_URL) {
+      await initPostgres(process.env.DATABASE_URL);
+      return await pgCreateMailbox(dId, em, nm, pw);
+    }
+    return db ? createMailbox(dId, em, nm, pw) : null;
+  },
+  getEmails: async (mId, folder) => {
+    if (getPgPool()) return await pgGetEmails(mId, folder);
+    if (process.env.DATABASE_URL) {
+      await initPostgres(process.env.DATABASE_URL);
+      return await pgGetEmails(mId, folder);
+    }
+    return db ? getEmails(mId, folder) : [];
+  },
+  getEmailById: async (id, mId) => {
+    if (getPgPool()) return await pgGetEmailById(id, mId);
+    if (process.env.DATABASE_URL) {
+      await initPostgres(process.env.DATABASE_URL);
+      return await pgGetEmailById(id, mId);
+    }
+    return db ? getEmailById(id, mId) : null;
+  },
+  getAttachmentById: async (id, mId) => {
+    if (getPgPool()) return await pgGetAttachmentById(id, mId);
+    if (process.env.DATABASE_URL) {
+      await initPostgres(process.env.DATABASE_URL);
+      return await pgGetAttachmentById(id, mId);
+    }
+    return db ? getAttachmentById(id, mId) : null;
+  },
+  markEmailRead: async (id, mId, r) => {
+    if (getPgPool()) return await pgMarkEmailRead(id, mId, r);
+    if (process.env.DATABASE_URL) {
+      await initPostgres(process.env.DATABASE_URL);
+      return await pgMarkEmailRead(id, mId, r);
+    }
+    return db ? markEmailRead(id, mId, r) : { success: false };
+  },
+  toggleStarEmail: async (id, mId) => {
+    if (getPgPool()) return await pgToggleStarEmail(id, mId);
+    if (process.env.DATABASE_URL) {
+      await initPostgres(process.env.DATABASE_URL);
+      return await pgToggleStarEmail(id, mId);
+    }
+    return db ? toggleStarEmail(id, mId) : { success: false };
+  },
+  deleteEmail: async (id, mId) => {
+    if (getPgPool()) return await pgDeleteEmail(id, mId);
+    if (process.env.DATABASE_URL) {
+      await initPostgres(process.env.DATABASE_URL);
+      return await pgDeleteEmail(id, mId);
+    }
+    return db ? deleteEmail(id, mId) : { error: 'Database unavailable' };
+  },
+  recordInboundEvent: async (eId, type, pl) => {
+    if (getPgPool()) return await pgRecordInboundEvent(eId, type, pl);
+    if (process.env.DATABASE_URL) {
+      await initPostgres(process.env.DATABASE_URL);
+      return await pgRecordInboundEvent(eId, type, pl);
+    }
+    return db ? recordInboundEvent(eId, type, pl) : 0;
+  },
+  getInboundEventById: async (eId) => {
+    if (getPgPool()) return await pgGetInboundEventById(eId);
+    if (process.env.DATABASE_URL) {
+      await initPostgres(process.env.DATABASE_URL);
+      return await pgGetInboundEventById(eId);
+    }
+    return db ? getInboundEventById(eId) : null;
+  },
+  getSmtpLogs: async (l) => {
+    if (getPgPool()) return await pgGetSmtpLogs(l);
+    if (process.env.DATABASE_URL) {
+      await initPostgres(process.env.DATABASE_URL);
+      return await pgGetSmtpLogs(l);
+    }
+    return db ? getSmtpLogs(l) : [];
+  }
 };
 
 // Strict CORS: Allow only local web app & public tunnels if configured

@@ -172,7 +172,10 @@ window.switchFolder = function(folder) {
 };
 
 window.reloadEmails = async function() {
-  if (!state.activeMailboxId) return;
+  if (!state.activeMailboxId) {
+    await loadMailboxes();
+    if (!state.activeMailboxId) return;
+  }
   try {
     const res = await fetchWithAuth(`/api/mailboxes/${state.activeMailboxId}/emails?folder=${state.activeFolder}`);
     if (res.status === 403 || res.status === 401) {

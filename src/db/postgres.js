@@ -20,7 +20,7 @@ for (const p of caCandidates) {
     try {
       caContent = fs.readFileSync(p, 'utf8');
       break;
-    } catch {}
+    } catch { }
   }
 }
 

@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AetherMail — Self-Hosted Email Server & SaaS Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+  <!-- Top App Navigation -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="brand-logo">
+        <div class="logo-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+            <polyline points="22,6 12,13 2,6"></polyline>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">Aether<span class="highlight">Mail</span></span>
+          <span class="brand-badge">SaaS Edition</span>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="main-tabs">
+        <button id="tab-webmail-btn" class="tab-btn active" onclick="switchMainTab('webmail')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+            <polyline points="22,6 12,13 2,6"></polyline>
+          </svg>
+          Webmail
+        </button>
+        <button id="tab-domains-btn" class="tab-btn" onclick="switchMainTab('domains')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+          </svg>
+          Domains & DNS
+        </button>
+        <button id="tab-mailboxes-btn" class="tab-btn" onclick="switchMainTab('mailboxes')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          Mailboxes
+        </button>
+        <button id="tab-logs-btn" class="tab-btn" onclick="switchMainTab('logs')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="4 17 10 11 4 5"></polyline>
+            <line x1="12" y1="19" x2="20" y2="19"></line>
+          </svg>
+          SMTP Monitor
+        </button>
+      </nav>
+    </div>
+
+    <div class="header-right">
+      <!-- Live Server Badges -->
+      <div class="server-status-pill">
+        <span class="status-dot pulse-green"></span>
+        <span class="status-label">SMTP :2525</span>
+      </div>
+      <div class="server-status-pill">
+        <span class="status-dot pulse-blue"></span>
+        <span class="status-label">DB SQLite Ready</span>
+      </div>
+
+      <!-- Active Mailbox Picker -->
+      <div class="mailbox-selector-wrap">
+        <label for="active-mailbox-select" class="sr-only">Active Mailbox</label>
+        <select id="active-mailbox-select" class="mailbox-select" onchange="onMailboxChange(this.value)">
+          <option value="">Loading Mailboxes...</option>
+        </select>
+      </div>
+
+      <button id="compose-btn" class="btn-primary" onclick="openComposeModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+        </svg>
+        Compose
+      </button>
+
+      <button id="quick-test-btn" class="btn-secondary" onclick="openSimulateModal()" title="Simulate Inbound SMTP Test">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+        Test Inbound
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="app-body">
+    <!-- VIEW 1: WEBMAIL VIEW -->
+    <section id="view-webmail" class="view-panel active">
+      <div class="webmail-container">
+        <!-- Webmail Sidebar -->
+        <aside class="webmail-sidebar">
+          <div class="folder-group">
+            <button class="folder-item active" data-folder="inbox" onclick="switchFolder('inbox')">
+              <span class="folder-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline>
+                  <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path>
+                </svg>
+              </span>
+              <span class="folder-name">Inbox</span>
+              <span id="inbox-badge" class="folder-badge">0</span>
+            </button>
+
+            <button class="folder-item" data-folder="sent" onclick="switchFolder('sent')">
+              <span class="folder-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </span>
+              <span class="folder-name">Sent</span>
+            </button>
+
+            <button class="folder-item" data-folder="trash" onclick="switchFolder('trash')">
+              <span class="folder-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </span>
+              <span class="folder-name">Trash</span>
+            </button>
+          </div>
+
+          <div class="mailbox-info-card">
+            <div class="info-label">Active Mailbox</div>
+            <div id="sidebar-active-email" class="info-email">admin@mybusiness.com</div>
+            <div class="quota-bar-wrap">
+              <div class="quota-bar"><div class="quota-fill" style="width: 5%;"></div></div>
+              <div class="quota-text">24 KB / 1.0 GB</div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Email List Pane -->
+        <section class="email-list-pane">
+          <div class="list-toolbar">
+            <div class="search-box">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="email-search-input" placeholder="Search emails..." oninput="filterEmails(this.value)">
+            </div>
+            <button class="icon-btn" onclick="reloadEmails()" title="Refresh Mailbox">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div id="email-items-container" class="email-items-container">
+            <!-- Dynamically populated -->
+          </div>
+        </section>
+
+        <!-- Email Reader Pane -->
+        <section class="email-reader-pane">
+          <div id="email-empty-state" class="reader-empty-state">
+            <div class="empty-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                <polyline points="22,6 12,13 2,6"></polyline>
+              </svg>
+            </div>
+            <h3>No Email Selected</h3>
+            <p>Select a message from the list to preview headers, body, and attachments.</p>
+          </div>
+
+          <article id="email-reader-content" class="reader-content hidden">
+            <!-- Header section -->
+            <div class="reader-header">
+              <div class="reader-subject-row">
+                <h2 id="reader-subject" class="reader-subject">Subject</h2>
+                <div class="reader-actions">
+                  <button id="reader-star-btn" class="icon-btn" onclick="toggleStarCurrent()" title="Star">★</button>
+                  <button id="reader-reply-btn" class="icon-btn" onclick="replyCurrent()" title="Reply">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="9 17 4 12 9 7"></polyline>
+                      <path d="M20 18v-2a4 4 0 0 0-4-4H4"></path>
+                    </svg>
+                  </button>
+                  <button id="reader-delete-btn" class="icon-btn text-danger" onclick="deleteCurrent()" title="Delete">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div class="reader-meta-row">
+                <div class="sender-avatar" id="reader-avatar">A</div>
+                <div class="meta-details">
+                  <div class="sender-name-line">
+                    <span id="reader-from-name" class="from-name">Sender Name</span>
+                    <span id="reader-from-addr" class="from-addr">&lt;sender@domain.com&gt;</span>
+                  </div>
+                  <div class="to-line">
+                    To: <span id="reader-to-addr">recipient@domain.com</span>
+                    <span class="meta-sep">•</span>
+                    <span id="reader-date" class="reader-date">Oct 23, 10:00 AM</span>
+                  </div>
+                </div>
+                <div class="security-badges">
+                  <span class="sec-badge sec-pass">RFC 5321</span>
+                  <span class="sec-badge sec-pass">MIME Parsed</span>
+                </div>
+              </div>
+
+              <!-- Attachments preview strip -->
+              <div id="reader-attachments-strip" class="reader-attachments-strip hidden">
+                <span class="att-label">Attachments:</span>
+                <div id="reader-attachments-list" class="attachments-list"></div>
+              </div>
+            </div>
+
+            <!-- Body container -->
+            <div class="reader-body">
+              <iframe id="reader-html-frame" sandbox="allow-same-origin" class="email-iframe"></iframe>
+            </div>
+          </article>
+        </section>
+      </div>
+    </section>
+
+    <!-- VIEW 2: DOMAINS & DNS SETUP -->
+    <section id="view-domains" class="view-panel">
+      <div class="view-inner-container">
+        <div class="view-header-row">
+          <div>
+            <h2>Domain Management & DNS Records</h2>
+            <p class="subtitle">Connect your custom domains, generate DKIM (RSA-2048) keys, and inspect DNS verification.</p>
+          </div>
+          <button class="btn-primary" onclick="openAddDomainModal()">+ Add New Domain</button>
+        </div>
+
+        <div id="domains-grid" class="domains-grid">
+          <!-- Dynamically populated domain cards with DNS tables -->
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: MAILBOXES MANAGER -->
+    <section id="view-mailboxes" class="view-panel">
+      <div class="view-inner-container">
+        <div class="view-header-row">
+          <div>
+            <h2>Mailbox Accounts</h2>
+            <p class="subtitle">Create email accounts (e.g. admin@, support@, ceo@) for any of your connected domains.</p>
+          </div>
+          <button class="btn-primary" onclick="openAddMailboxModal()">+ Create Mailbox</button>
+        </div>
+
+        <div class="card-table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Email Address</th>
+                <th>Display Name</th>
+                <th>Domain</th>
+                <th>Quota</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="mailboxes-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 4: LIVE SMTP MONITOR -->
+    <section id="view-logs" class="view-panel">
+      <div class="view-inner-container">
+        <div class="view-header-row">
+          <div>
+            <h2>Live SMTP Server Monitor</h2>
+            <p class="subtitle">Real-time trace of raw RFC 5321 handshakes, authentication, delivery, and errors.</p>
+          </div>
+          <button class="btn-secondary" onclick="reloadLogs()">Clear / Refresh Logs</button>
+        </div>
+
+        <div class="console-box">
+          <div class="console-header">
+            <div class="console-title">
+              <span class="status-dot pulse-green"></span>
+              SMTP Socket Activity Stream (:2525)
+            </div>
+            <span class="console-sub">Listening for RFC 5321 connections</span>
+          </div>
+          <div id="console-logs-list" class="console-content">
+            <!-- Dynamically populated logs -->
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL: COMPOSE EMAIL -->
+  <div id="compose-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>New Message</h3>
+        <button class="close-modal-btn" onclick="closeComposeModal()">&times;</button>
+      </div>
+      <form id="compose-form" onsubmit="handleSendEmail(event)">
+        <div class="form-group">
+          <label for="compose-from">From:</label>
+          <input type="text" id="compose-from" readonly class="input-readonly">
+        </div>
+        <div class="form-group">
+          <label for="compose-to">To:</label>
+          <input type="email" id="compose-to" required placeholder="recipient@domain.com">
+        </div>
+        <div class="form-group">
+          <label for="compose-subject">Subject:</label>
+          <input type="text" id="compose-subject" required placeholder="Email subject...">
+        </div>
+        <div class="form-group">
+          <label for="compose-body">Message:</label>
+          <textarea id="compose-body" rows="8" placeholder="Write your email here..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeComposeModal()">Cancel</button>
+          <button type="submit" id="send-submit-btn" class="btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+            Send Email
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD DOMAIN -->
+  <div id="add-domain-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Add Custom Domain</h3>
+        <button class="close-modal-btn" onclick="closeAddDomainModal()">&times;</button>
+      </div>
+      <form id="add-domain-form" onsubmit="handleAddDomain(event)">
+        <p class="modal-desc">Enter your domain name. Our system will generate the corresponding 2048-bit DKIM keypair, SPF string, and MX records automatically.</p>
+        <div class="form-group">
+          <label for="new-domain-name">Domain Name:</label>
+          <input type="text" id="new-domain-name" required placeholder="e.g. startupbrand.com">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeAddDomainModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Generate Keys & Add Domain</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD MAILBOX -->
+  <div id="add-mailbox-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Create New Mailbox</h3>
+        <button class="close-modal-btn" onclick="closeAddMailboxModal()">&times;</button>
+      </div>
+      <form id="add-mailbox-form" onsubmit="handleAddMailbox(event)">
+        <div class="form-group">
+          <label for="new-mailbox-domain">Select Domain:</label>
+          <select id="new-mailbox-domain" required></select>
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="new-mailbox-username">Username:</label>
+            <input type="text" id="new-mailbox-username" required placeholder="e.g. support or ceo">
+          </div>
+          <div class="form-group flex-1">
+            <label for="new-mailbox-name">Display Name:</label>
+            <input type="text" id="new-mailbox-name" required placeholder="e.g. Customer Support">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="new-mailbox-password">Password (min 8 characters):</label>
+          <input type="password" id="new-mailbox-password" required minlength="8" placeholder="Enter secure password">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeAddMailboxModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Create Mailbox</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: SIMULATE INBOUND SMTP -->
+  <div id="simulate-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Simulate Inbound SMTP Test</h3>
+        <button class="close-modal-btn" onclick="closeSimulateModal()">&times;</button>
+      </div>
+      <form id="simulate-form" onsubmit="handleSimulateTest(event)">
+        <p class="modal-desc">Simulates an external email server (like Gmail / Outlook) delivering a message to your local mailbox.</p>
+        <div class="form-group">
+          <label for="sim-from">External Sender Address:</label>
+          <input type="email" id="sim-from" value="elon.musk@x.com" required>
+        </div>
+        <div class="form-group">
+          <label for="sim-subject">Subject:</label>
+          <input type="text" id="sim-subject" value="Partnership Proposal with AetherMail 🚀" required>
+        </div>
+        <div class="form-group">
+          <label for="sim-body">Message Body (HTML supported):</label>
+          <textarea id="sim-body" rows="4">Hi team, congratulations on building your self-hosted email server platform! Everything looks clean and operational.</textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeSimulateModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Deliver Inbound Test</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

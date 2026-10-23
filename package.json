@@ -1,0 +1,22 @@
+{
+  "name": "email-server-platform",
+  "version": "1.0.0",
+  "description": "Self-hosted multi-tenant email server & webmail platform",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "test:smtp": "node test-smtp.js",
+    "test:inbound": "node test/inbound-tests.js",
+    "test:webhook": "node test/webhook-http-test.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "mailparser": "^3.7.2",
+    "nodemailer": "^6.10.0",
+    "pg": "^8.23.1",
+    "smtp-server": "^3.13.6"
+  }
+}
